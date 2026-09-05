@@ -1,4 +1,4 @@
-# kro2026-mission
+# kro2026-infra
 
 kro(Kubernetes Resource Orchestrator) + ACK(AWS Controllers for Kubernetes)를 이용해, 개발자가 `WebApp` 커스텀 리소스 하나만 apply하면 Deployment, Service 등이 함께 프로비저닝되는 셀프서비스 배포 플랫폼입니다. Terraform으로 전체 인프라(VPC, EKS, RDS 연동, GitOps 파이프라인)를 한 번에 구성합니다.
 

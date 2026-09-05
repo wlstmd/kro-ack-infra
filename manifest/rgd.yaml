@@ -1,0 +1,175 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: kro2026-webapp-rgd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: WebApp
+    spec:
+      name: string
+      image: string
+      replicas: integer | default=2
+      dbInstanceClass: string | default="db.t4g.micro"
+      dbAllocatedStorage: integer | default=20
+    status:
+      deploymentReady: ${deployment.status.readyReplicas}
+      dbEndpoint: ${dbinstance.status.endpoint.address}
+      dbStatus: ${dbinstance.status.dbInstanceStatus}
+
+  resources:
+    - id: dbMasterSecret
+      template:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: ${schema.spec.name}-db-master
+          namespace: kro2026
+        data:
+          password: U2tpbGw1MyMj
+
+    - id: dbinstance
+      template:
+        apiVersion: rds.services.k8s.aws/v1alpha1
+        kind: DBInstance
+        metadata:
+          name: ${schema.spec.name}-db
+          namespace: kro2026
+        spec:
+          dbInstanceIdentifier: ${schema.spec.name}-db
+          engine: postgres
+          dbInstanceClass: ${schema.spec.dbInstanceClass}
+          allocatedStorage: ${schema.spec.dbAllocatedStorage}
+          dbName: kro2026_db
+          dbSubnetGroupName: kro2026-db-subnet-group
+          masterUsername: appuser
+          masterUserPassword:
+            namespace: kro2026
+            name: ${schema.spec.name}-db-master
+            key: password
+
+    - id: dbConfig
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: ${schema.spec.name}-db-config
+          namespace: kro2026
+        data:
+          DB_HOST: ${dbinstance.status.endpoint.address}
+          DB_PORT: "5432"
+          DB_NAME: kro2026_db
+          DB_USER: appuser
+
+    - id: dbPasswordSecret
+      template:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: ${schema.spec.name}-db-secret
+          namespace: kro2026
+        data:
+          DB_PASSWORD: U2tpbGw1MyMj
+
+    - id: deployment
+      template:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: ${schema.spec.name}
+          namespace: kro2026
+          labels:
+            app.kubernetes.io/managed-by: kro
+        spec:
+          replicas: ${schema.spec.replicas}
+          selector:
+            matchLabels:
+              app: ${schema.spec.name}
+          template:
+            metadata:
+              labels:
+                app: ${schema.spec.name}
+                app.kubernetes.io/managed-by: kro
+            spec:
+              containers:
+                - name: app
+                  image: ${schema.spec.image}
+                  ports:
+                    - containerPort: 8080
+                  envFrom:
+                    - configMapRef:
+                        name: ${schema.spec.name}-db-config
+                    - secretRef:
+                        name: ${schema.spec.name}-db-secret
+                  resources:
+                    requests: { cpu: 100m, memory: 128Mi }
+                    limits: { cpu: 500m, memory: 256Mi }
+                  readinessProbe:
+                    httpGet: { path: /healthz, port: 8080 }
+                    initialDelaySeconds: 5
+                  livenessProbe:
+                    httpGet: { path: /healthz, port: 8080 }
+                    initialDelaySeconds: 15
+
+    - id: service
+      template:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: ${schema.spec.name}
+          namespace: kro2026
+        spec:
+          selector:
+            app: ${schema.spec.name}
+          ports:
+            - port: 80
+              targetPort: 8080
+
+    - id: ingress
+      template:
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: ${schema.spec.name}
+          namespace: kro2026
+          annotations:
+            kubernetes.io/ingress.class: alb
+            alb.ingress.kubernetes.io/scheme: internet-facing
+            alb.ingress.kubernetes.io/target-type: ip
+            alb.ingress.kubernetes.io/healthcheck-path: /healthz
+            alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+        spec:
+          rules:
+            - http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: ${schema.spec.name}
+                        port:
+                          number: 80
+
+    - id: hpa
+      template:
+        apiVersion: autoscaling/v2
+        kind: HorizontalPodAutoscaler
+        metadata:
+          name: ${schema.spec.name}
+          namespace: kro2026
+        spec:
+          scaleTargetRef:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: ${schema.spec.name}
+          minReplicas: 2
+          maxReplicas: 5
+          metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 70

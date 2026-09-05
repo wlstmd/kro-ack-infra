@@ -1,0 +1,11 @@
+apiVersion: kro.run/v1alpha1
+kind: WebApp
+metadata:
+  name: hello-app
+  namespace: kro2026
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  name: hello-app
+  image: <ECR_URI>:v1
+  replicas: 3

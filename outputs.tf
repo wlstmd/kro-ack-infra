@@ -1,0 +1,16 @@
+output "region" { value = var.region }
+output "account_id" { value = local.account_id }
+output "vpc_id" { value = aws_vpc.this.id }
+output "cluster_name" { value = aws_eks_cluster.this.name }
+output "ecr_uri" { value = aws_ecr_repository.customer.repository_url }
+output "eks_key_arn" { value = aws_kms_key.eks.arn }
+output "ack_rds_role_arn" { value = aws_iam_role.ack_rds.arn }
+output "db_subnet_group_name" { value = aws_db_subnet_group.this.name }
+output "flow_log_group_name" { value = aws_cloudwatch_log_group.vpc_flow_logs.name }
+output "app_subnet_ids" { value = [aws_subnet.app_a.id, aws_subnet.app_c.id] }
+output "db_subnet_ids" { value = [aws_subnet.db_a.id, aws_subnet.db_c.id] }
+output "bastion_instance_id" { value = aws_instance.bastion.id }
+output "artifacts_bucket" { value = aws_s3_bucket.artifacts.bucket }
+output "git_repo_url" { value = github_repository.argocd_repo.http_clone_url }
+output "git_repo_html_url" { value = github_repository.argocd_repo.html_url }
+output "alb_controller_role_arn" { value = aws_iam_role.alb_controller.arn }

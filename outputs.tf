@@ -14,3 +14,4 @@ output "artifacts_bucket" { value = aws_s3_bucket.artifacts.bucket }
 output "git_repo_url" { value = github_repository.argocd_repo.http_clone_url }
 output "git_repo_html_url" { value = github_repository.argocd_repo.html_url }
 output "alb_controller_role_arn" { value = aws_iam_role.alb_controller.arn }
+output "github_actions_role_arn" { value = aws_iam_role.github_actions_ci.arn }

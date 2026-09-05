@@ -46,6 +46,63 @@ resource "github_repository_file" "app_webapp_sample" {
   overwrite_on_create = true
 }
 
+resource "github_repository_file" "app_main_go" {
+  repository          = github_repository.argocd_repo.name
+  branch              = "main"
+  file                = "src/app/main.go"
+  content             = file("${path.module}/src/app/main.go")
+  commit_message      = "chore: add customer app source"
+  overwrite_on_create = true
+}
+
+resource "github_repository_file" "app_go_mod" {
+  repository          = github_repository.argocd_repo.name
+  branch              = "main"
+  file                = "src/app/go.mod"
+  content             = file("${path.module}/src/app/go.mod")
+  commit_message      = "chore: add go.mod"
+  overwrite_on_create = true
+}
+
+resource "github_repository_file" "app_go_sum" {
+  repository          = github_repository.argocd_repo.name
+  branch              = "main"
+  file                = "src/app/go.sum"
+  content             = file("${path.module}/src/app/go.sum")
+  commit_message      = "chore: add go.sum"
+  overwrite_on_create = true
+}
+
+resource "github_repository_file" "app_dockerfile" {
+  repository          = github_repository.argocd_repo.name
+  branch              = "main"
+  file                = "src/app/Dockerfile"
+  content             = file("${path.module}/src/app/Dockerfile")
+  commit_message      = "chore: add multi-stage Dockerfile"
+  overwrite_on_create = true
+}
+
+resource "github_repository_file" "ci_workflow" {
+  repository     = github_repository.argocd_repo.name
+  branch         = "main"
+  file           = ".github/workflows/ci.yml"
+  commit_message = "chore: add CI workflow"
+  content = replace(
+    replace(
+      replace(
+        file("${path.module}/.github/workflows/ci.yml"),
+        "<CI_ROLE_ARN>",
+        aws_iam_role.github_actions_ci.arn,
+      ),
+      "<AWS_REGION>",
+      var.region,
+    ),
+    "<ECR_URI>",
+    aws_ecr_repository.customer.repository_url,
+  )
+  overwrite_on_create = true
+}
+
 resource "github_repository_file" "argocd_application" {
   repository     = github_repository.argocd_repo.name
   branch         = "main"

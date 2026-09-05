@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/app/**"
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: src/app/go.mod
+
+      - name: Go build check
+        working-directory: src/app
+        run: go build ./...
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: <CI_ROLE_ARN>
+          aws-region: <AWS_REGION>
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build
+        run: |
+          TAG="${GITHUB_SHA::7}"
+          docker build -t "<ECR_URI>:$TAG" -t "<ECR_URI>:latest" src/app
+          docker push "<ECR_URI>:$TAG"
+          docker push "<ECR_URI>:latest"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Update WebApp manifest for GitOps
+        run: |
+          sed -i "s#image: .*#image: <ECR_URI>:${{ steps.build.outputs.tag }}#" manifest/webapp-sample.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest/webapp-sample.yaml
+          git diff --cached --quiet || git commit -m "ci: deploy image ${{ steps.build.outputs.tag }}"
+          git push

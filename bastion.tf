@@ -104,11 +104,27 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
   }
 }
 
-resource "aws_s3_object" "binary" {
+resource "aws_s3_object" "app_main_go" {
   bucket     = aws_s3_bucket.artifacts.id
-  key        = "customer"
-  source     = "${path.module}/src/app/customer"
-  etag       = filemd5("${path.module}/src/app/customer")
+  key        = "main.go"
+  source     = "${path.module}/src/app/main.go"
+  etag       = filemd5("${path.module}/src/app/main.go")
+  depends_on = [aws_s3_bucket_server_side_encryption_configuration.artifacts]
+}
+
+resource "aws_s3_object" "app_go_mod" {
+  bucket     = aws_s3_bucket.artifacts.id
+  key        = "go.mod"
+  source     = "${path.module}/src/app/go.mod"
+  etag       = filemd5("${path.module}/src/app/go.mod")
+  depends_on = [aws_s3_bucket_server_side_encryption_configuration.artifacts]
+}
+
+resource "aws_s3_object" "app_go_sum" {
+  bucket     = aws_s3_bucket.artifacts.id
+  key        = "go.sum"
+  source     = "${path.module}/src/app/go.sum"
+  etag       = filemd5("${path.module}/src/app/go.sum")
   depends_on = [aws_s3_bucket_server_side_encryption_configuration.artifacts]
 }
 
@@ -218,7 +234,9 @@ resource "aws_instance" "bastion" {
     aws_nat_gateway.a,
     aws_nat_gateway.c,
     aws_vpc_endpoint.interface,
-    aws_s3_object.binary,
+    aws_s3_object.app_main_go,
+    aws_s3_object.app_go_mod,
+    aws_s3_object.app_go_sum,
     aws_s3_object.dockerfile,
     aws_s3_object.namespace_yaml,
     aws_s3_object.kyverno_yaml,

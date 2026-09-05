@@ -28,9 +28,10 @@ chmod +x /tmp/get-helm-3
 /tmp/get-helm-3
 
 mkdir -p /opt/customer-app
-aws s3 cp "s3://$BUCKET/customer" /opt/customer-app/customer
+aws s3 cp "s3://$BUCKET/main.go" /opt/customer-app/main.go
+aws s3 cp "s3://$BUCKET/go.mod" /opt/customer-app/go.mod
+aws s3 cp "s3://$BUCKET/go.sum" /opt/customer-app/go.sum
 aws s3 cp "s3://$BUCKET/Dockerfile" /opt/customer-app/Dockerfile
-chmod +x /opt/customer-app/customer
 
 mkdir -p /opt/manifests
 aws s3 cp "s3://$BUCKET/namespace.yaml" /opt/manifests/namespace.yaml
